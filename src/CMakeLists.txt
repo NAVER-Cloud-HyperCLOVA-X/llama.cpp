@@ -140,6 +140,7 @@ add_library(llama
             models/xverse.cpp
             models/mistral3.cpp
             models/graph-context-mamba.cpp
+            models/hyperclovax.cpp
             )
 
 set_target_properties(llama PROPERTIES

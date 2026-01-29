@@ -1525,6 +1525,9 @@ static void common_chat_parse(common_chat_msg_parser & builder) {
 
     switch (builder.syntax().format) {
         case COMMON_CHAT_FORMAT_CONTENT_ONLY:
+        case COMMON_CHAT_FORMAT_HCX_SEED_OMNI_8B:
+        case COMMON_CHAT_FORMAT_HCX_SEED_THINK_14B:
+        case COMMON_CHAT_FORMAT_HCX_SEED_THINK_32B:
             common_chat_parse_content_only(builder);
             break;
         case COMMON_CHAT_FORMAT_GENERIC:

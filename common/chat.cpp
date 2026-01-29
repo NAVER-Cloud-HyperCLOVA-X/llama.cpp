@@ -702,6 +702,9 @@ const char * common_chat_format_name(common_chat_format format) {
         case COMMON_CHAT_FORMAT_PEG_SIMPLE: return "peg-simple";
         case COMMON_CHAT_FORMAT_PEG_NATIVE: return "peg-native";
         case COMMON_CHAT_FORMAT_PEG_CONSTRUCTED: return "peg-constructed";
+        case COMMON_CHAT_FORMAT_HCX_SEED_OMNI_8B: return "HyperCLOVAX-SEED-Omni-8B";
+        case COMMON_CHAT_FORMAT_HCX_SEED_THINK_14B: return "HyperCLOVAX-SEED-Think-14B";
+        case COMMON_CHAT_FORMAT_HCX_SEED_THINK_32B: return "HyperCLOVAX-SEED-Think-32B";
         default:
             throw std::runtime_error("Unknown chat format");
     }
@@ -2695,6 +2698,52 @@ static common_chat_params common_chat_params_init_translate_gemma(const common_c
     return data;
 }
 
+static common_chat_params common_chat_params_init_hcx_seed_omni_8b(const common_chat_template & tmpl, const struct templates_params & inputs) {
+    common_chat_params data;
+    auto prompt = apply(tmpl, inputs);
+
+    data.prompt = prompt;
+    data.format = COMMON_CHAT_FORMAT_HCX_SEED_OMNI_8B;
+
+    if (string_ends_with(data.prompt, "<think>\n")) {
+        if (!inputs.enable_thinking) {
+            data.prompt += "\n</think>\n\n";
+        }
+    }
+
+    return data;
+}
+
+static common_chat_params common_chat_params_init_hcx_seed_think_14b(const common_chat_template & tmpl, const struct templates_params & inputs) {
+    common_chat_params data;
+    auto prompt = apply(tmpl, inputs);
+
+    data.prompt = prompt;
+    if (inputs.enable_thinking) {
+        data.prompt += "/think";
+    }
+    data.prompt += "\n";
+    data.format = COMMON_CHAT_FORMAT_HCX_SEED_THINK_14B;
+
+    return data;
+}
+
+static common_chat_params common_chat_params_init_hcx_seed_think_32b(const common_chat_template & tmpl, const struct templates_params & inputs) {
+    common_chat_params data;
+    auto prompt = apply(tmpl, inputs);
+
+    data.prompt = prompt;
+    data.format = COMMON_CHAT_FORMAT_HCX_SEED_THINK_32B;
+
+    if (!inputs.enable_thinking) {
+        if (string_ends_with(data.prompt, "<think>\n")) {
+            data.prompt += "\n</think>\n\n";
+        }
+    }
+
+    return data;
+}
+
 static common_chat_params common_chat_params_init_without_tools(const common_chat_template & tmpl, const struct templates_params & inputs) {
     common_chat_params data;
     data.prompt = apply(tmpl, inputs);
@@ -2914,6 +2963,28 @@ static common_chat_params common_chat_templates_apply_jinja(
         if (caps.supports_tool_calls && !caps.supports_tools) {
             LOG_WRN("Template supports tool calls but does not natively describe tools. The fallback behaviour used may produce bad results, inspect prompt w/ --verbose & consider overriding the template.\n");
         }
+    }
+
+    // HyperCLOVAX-SEED-Think-14B
+    if (src.find("<|im_start|>assistant/think") != std::string::npos && params.json_schema.is_null()) {
+        return common_chat_params_init_hcx_seed_think_14b(tmpl, params);
+    }
+
+    // HyperCLOVAX-SEED-Think-32B
+    if (src.find("thinking is defined") != std::string::npos &&
+      params.json_schema.is_null()) {
+        return common_chat_params_init_hcx_seed_think_32b(tmpl, params);
+    }
+
+    // HyperCLOVAX-SEED-Omni-8B
+    if (src.find("# Tools") != std::string::npos &&
+        src.find("<tools>") != std::string::npos &&
+        src.find("<tool_call>") != std::string::npos &&
+        src.find("<arg_key>") != std::string::npos &&
+        src.find("<arg_value>") != std::string::npos &&
+        src.find("<tool_response>") != std::string::npos &&
+        src.find("<think>") != std::string::npos) {
+        return common_chat_params_init_hcx_seed_omni_8b(tmpl, params);
     }
 
     // DeepSeek V3.1: detect based on specific patterns in the template

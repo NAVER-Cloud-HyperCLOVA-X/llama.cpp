@@ -2449,6 +2449,24 @@ void llama_model::load_hparams(llama_model_loader & ml) {
                     default: type = LLM_TYPE_UNKNOWN;
                 }
             } break;
+        case LLM_ARCH_GREENLAND:
+        case LLM_ARCH_MALTA:
+        case LLM_ARCH_HCX_SEED_THINK:
+        case LLM_ARCH_HYPERCLOVAX:
+            {
+                ml.get_key(LLM_KV_ATTENTION_LAYERNORM_EPS, hparams.f_norm_eps);
+                ml.get_key(LLM_KV_LOGIT_SCALE,             hparams.f_logit_scale, /* required */ false);
+                ml.get_key(LLM_KV_RESIDUAL_SCALE,          hparams.f_residual_scale, /* required */ false);
+                ml.get_key(LLM_KV_EMBEDDING_SCALE,         hparams.f_embedding_scale, /* required */ false);
+                ml.get_key(LLM_KV_ATTENTION_SCALE,         hparams.f_attention_scale, /* required */ false);
+
+                switch (hparams.n_layer) {
+                    case 24: type = LLM_TYPE_1B; break;
+                    case 26: type = LLM_TYPE_3B; break;
+                    case 38: type = LLM_TYPE_14B; break;
+                    default: type = LLM_TYPE_UNKNOWN;
+                }
+            } break;
         default: throw std::runtime_error("unsupported model architecture");
     }
 
@@ -6970,6 +6988,50 @@ bool llama_model::load_tensors(llama_model_loader & ml) {
                         layer.ffn_up   = create_tensor(tn(LLM_TENSOR_FFN_UP,   "weight", i), {n_embd,   n_ff}, 0);
                     }
                 } break;
+            case LLM_ARCH_GREENLAND:
+            case LLM_ARCH_MALTA:
+            case LLM_ARCH_HCX_SEED_THINK:
+            case LLM_ARCH_HYPERCLOVAX:
+               {
+                    tok_embd = create_tensor(tn(LLM_TENSOR_TOKEN_EMBD, "weight"), {n_embd, n_vocab}, 0);
+
+                   // output
+                    {
+                        output        = create_tensor(tn(LLM_TENSOR_OUTPUT,      "weight"), {n_embd, n_vocab}, 0);
+                        output_norm   = create_tensor(tn(LLM_TENSOR_OUTPUT_NORM, "weight"), {n_embd}, 0);
+                        output_norm_b = create_tensor(tn(LLM_TENSOR_OUTPUT_NORM, "bias"),   {n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+                    }
+
+                    for (int i = 0; i < n_layer; ++i) {
+                        auto & layer = layers[i];
+
+                        layer.wq = create_tensor(tn(LLM_TENSOR_ATTN_Q,   "weight", i), {n_embd, n_embd}, 0);
+                        layer.bq = create_tensor(tn(LLM_TENSOR_ATTN_Q,   "bias", i), {n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+
+                        layer.wk = create_tensor(tn(LLM_TENSOR_ATTN_K,   "weight", i), {n_embd, n_embd_gqa}, 0);
+                        layer.bk = create_tensor(tn(LLM_TENSOR_ATTN_K,   "bias", i), {n_embd_gqa}, llama_model_loader::TENSOR_NOT_REQUIRED);
+
+                        layer.wv          = create_tensor(tn(LLM_TENSOR_ATTN_V,   "weight", i),  {n_embd, n_embd_gqa}, 0);
+                        layer.bv          = create_tensor(tn(LLM_TENSOR_ATTN_V,   "bias", i),    {n_embd_gqa}, llama_model_loader::TENSOR_NOT_REQUIRED);
+
+                        layer.wo = create_tensor(tn(LLM_TENSOR_ATTN_OUT, "weight", i), {n_embd, n_embd}, 0);
+                        layer.bo = create_tensor(tn(LLM_TENSOR_ATTN_OUT, "bias", i), {n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+                        layer.attn_post_norm = create_tensor(tn(LLM_TENSOR_ATTN_POST_NORM, "weight", i), {n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+
+                        layer.ffn_gate   = create_tensor(tn(LLM_TENSOR_FFN_GATE,   "weight", i), {n_embd,   n_ff}, 0);
+                        layer.ffn_gate_b = create_tensor(tn(LLM_TENSOR_FFN_GATE, "bias", i),     {n_ff}, llama_model_loader::TENSOR_NOT_REQUIRED);
+                        layer.ffn_up     = create_tensor(tn(LLM_TENSOR_FFN_UP,   "weight", i), {n_embd,   n_ff}, 0);
+                        layer.ffn_up_b   = create_tensor(tn(LLM_TENSOR_FFN_UP, "bias", i),     {n_ff}, llama_model_loader::TENSOR_NOT_REQUIRED);
+                        layer.ffn_down   = create_tensor(tn(LLM_TENSOR_FFN_DOWN, "weight", i), {n_ff, n_embd}, 0);
+                        layer.ffn_down_b = create_tensor(tn(LLM_TENSOR_FFN_DOWN, "bias", i),   {n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+
+                        layer.attn_norm   = create_tensor(tn(LLM_TENSOR_ATTN_NORM, "weight", i), {n_embd}, 0);
+                        layer.attn_norm_b = create_tensor(tn(LLM_TENSOR_ATTN_NORM, "bias", i),   {n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+                        layer.ffn_norm    = create_tensor(tn(LLM_TENSOR_FFN_NORM, "weight", i), {n_embd}, 0);
+                        layer.ffn_norm_b  = create_tensor(tn(LLM_TENSOR_FFN_NORM, "bias", i), {n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+                        layer.ffn_post_norm   = create_tensor(tn(LLM_TENSOR_FFN_POST_NORM, "weight", i), {n_embd}, llama_model_loader::TENSOR_NOT_REQUIRED);
+                    }
+                } break;
             default:
                 throw std::runtime_error("unknown architecture");
         }
@@ -8085,6 +8147,13 @@ ggml_cgraph * llama_model::build_graph(const llm_graph_params & params) const {
             {
                 llm = std::make_unique<llm_build_mimo2_iswa>(*this, params);
             } break;
+        case LLM_ARCH_GREENLAND:
+        case LLM_ARCH_MALTA:
+        case LLM_ARCH_HCX_SEED_THINK:
+        case LLM_ARCH_HYPERCLOVAX:
+            {
+                llm = std::make_unique<llm_build_hyperclovax>(*this, params);
+            } break;
         default:
             GGML_ABORT("fatal error");
     }
@@ -8267,6 +8336,10 @@ llama_rope_type llama_model_rope_type(const llama_model * model) {
         case LLM_ARCH_MISTRAL3:
         case LLM_ARCH_LLAMA_EMBED:
         case LLM_ARCH_MAINCODER:
+        case LLM_ARCH_GREENLAND:
+        case LLM_ARCH_MALTA:
+        case LLM_ARCH_HCX_SEED_THINK:
+        case LLM_ARCH_HYPERCLOVAX:
             return LLAMA_ROPE_TYPE_NORM;
 
         // the pairs of head values are offset by n_rot/2

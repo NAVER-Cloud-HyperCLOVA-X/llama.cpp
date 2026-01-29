@@ -120,6 +120,10 @@ static const std::map<llm_arch, const char *> LLM_ARCH_NAMES = {
     { LLM_ARCH_MIMO2,            "mimo2"           },
     { LLM_ARCH_LLAMA_EMBED,      "llama-embed"      },
     { LLM_ARCH_MAINCODER,        "maincoder"        },
+    { LLM_ARCH_GREENLAND,        "greenland"        },
+    { LLM_ARCH_MALTA,            "malta"            },
+    { LLM_ARCH_HCX_SEED_THINK,   "hcx-seed-think"   },
+    { LLM_ARCH_HYPERCLOVAX,      "hyperclovax"      },
     { LLM_ARCH_UNKNOWN,          "(unknown)"        },
 };
 
@@ -2288,6 +2292,27 @@ static std::set<llm_tensor> llm_get_tensor_names(llm_arch arch) {
                 LLM_TENSOR_FFN_GATE,
                 LLM_TENSOR_FFN_DOWN,
                 LLM_TENSOR_FFN_UP,
+            };
+        case LLM_ARCH_GREENLAND:
+        case LLM_ARCH_MALTA:
+        case LLM_ARCH_HCX_SEED_THINK:
+        case LLM_ARCH_HYPERCLOVAX:
+            return {
+                LLM_TENSOR_TOKEN_EMBD,
+                LLM_TENSOR_OUTPUT_NORM,
+                LLM_TENSOR_OUTPUT,
+                LLM_TENSOR_ROPE_FREQS,
+                LLM_TENSOR_ATTN_NORM,
+                LLM_TENSOR_ATTN_Q,
+                LLM_TENSOR_ATTN_K,
+                LLM_TENSOR_ATTN_V,
+                LLM_TENSOR_ATTN_OUT,
+                LLM_TENSOR_ATTN_POST_NORM,
+                LLM_TENSOR_FFN_NORM,
+                LLM_TENSOR_FFN_GATE,
+                LLM_TENSOR_FFN_DOWN,
+                LLM_TENSOR_FFN_UP,
+                LLM_TENSOR_FFN_POST_NORM,
             };
         default:
             GGML_ABORT("unknown architecture for tensor mapping");
