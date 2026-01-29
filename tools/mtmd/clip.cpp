@@ -818,6 +818,7 @@ static ggml_cgraph * clip_image_build_graph(clip_ctx * ctx, const clip_image_f32
         case PROJECTOR_TYPE_QWEN2A:
         case PROJECTOR_TYPE_GLMA:
         case PROJECTOR_TYPE_MUSIC_FLAMINGO:
+        case PROJECTOR_TYPE_HCX_QWEN2A:
             {
                 builder = std::make_unique<clip_graph_whisper_enc>(ctx, img);
             } break;
@@ -849,6 +850,10 @@ static ggml_cgraph * clip_image_build_graph(clip_ctx * ctx, const clip_image_f32
             {
                 builder = std::make_unique<clip_graph_youtuvl>(ctx, img);
             } break;
+        case PROJECTOR_TYPE_HCX_QWEN25VL:
+        {
+            builder = std::make_unique<clip_graph_hcx_qwen2vl>(ctx, img);
+        } break;
         default:
             GGML_ABORT("missing cgraph builder");
     }
@@ -973,6 +978,12 @@ struct clip_model_loader {
                 model.proj_type = modality == CLIP_MODALITY_VISION
                                     ? PROJECTOR_TYPE_QWEN25VL
                                     : PROJECTOR_TYPE_QWEN2A;
+            }
+
+            if (model.proj_type == PROJECTOR_TYPE_HCX_OMNI) {
+                model.proj_type = modality == CLIP_MODALITY_VISION
+                                    ? PROJECTOR_TYPE_HCX_QWEN25VL
+                                    : PROJECTOR_TYPE_HCX_QWEN2A;
             }
         }
 
@@ -1156,10 +1167,11 @@ struct clip_model_loader {
                 case PROJECTOR_TYPE_QWEN2VL:
                 case PROJECTOR_TYPE_QWEN25VL:
                 case PROJECTOR_TYPE_QWEN3VL:
+                case PROJECTOR_TYPE_HCX_QWEN25VL:
                     {
                         hparams.n_merge = 2; // default value for Qwen 2 and 2.5
                         get_u32(KEY_SPATIAL_MERGE_SIZE, hparams.n_merge, false);
-                        get_u32(KEY_WIN_ATTN_PATTERN, hparams.n_wa_pattern, model.proj_type == PROJECTOR_TYPE_QWEN25VL); // only 2.5 requires it
+                        get_u32(KEY_WIN_ATTN_PATTERN, hparams.n_wa_pattern, model.proj_type == PROJECTOR_TYPE_QWEN25VL || model.proj_type == PROJECTOR_TYPE_HCX_QWEN25VL); // only 2.5 requires it
                         // ref: https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct/blob/main/preprocessor_config.json
                         hparams.set_limit_image_tokens(8, 4096);
                         hparams.set_warmup_n_tokens(46*46); // avoid OOM on warmup
@@ -1203,6 +1215,7 @@ struct clip_model_loader {
                 case PROJECTOR_TYPE_GLMA:
                 case PROJECTOR_TYPE_VOXTRAL:
                 case PROJECTOR_TYPE_MUSIC_FLAMINGO:
+                case PROJECTOR_TYPE_HCX_QWEN2A:
                     {
                         bool require_stack = model.proj_type == PROJECTOR_TYPE_ULTRAVOX ||
                                              model.proj_type == PROJECTOR_TYPE_VOXTRAL ||
@@ -1403,6 +1416,7 @@ struct clip_model_loader {
                     || model.proj_type == PROJECTOR_TYPE_GEMMA3
                     || model.proj_type == PROJECTOR_TYPE_IDEFICS3
                     || model.proj_type == PROJECTOR_TYPE_MINICPMV
+                    || model.proj_type == PROJECTOR_TYPE_HCX_QWEN25VL
                 ) && layer.ff_up_w && layer.ff_down_w && layer.ff_down_w->ne[0] == hparams.n_embd;
             if (is_ffn_swapped) {
                 // swap up and down weights
@@ -1828,6 +1842,26 @@ struct clip_model_loader {
                         layer.conv_pw2_w   = get_tensor(string_format(TN_CONV_PW2,  prefix, il, "weight"));
                         layer.conv_pw2_b   = get_tensor(string_format(TN_CONV_PW2,  prefix, il, "bias"));
                     }
+                } break;
+            case PROJECTOR_TYPE_HCX_QWEN25VL:
+                {
+                    model.mm_0_w = get_tensor(string_format(TN_LLAVA_PROJ, 0, "weight"));
+                    model.mm_0_b = get_tensor(string_format(TN_LLAVA_PROJ, 0, "bias"));
+                    model.mm_1_w = get_tensor(string_format(TN_LLAVA_PROJ, 2, "weight"));
+                    model.mm_1_b = get_tensor(string_format(TN_LLAVA_PROJ, 2, "bias"));
+                    model.mm_fc_w = get_tensor(string_format(TN_MM_FC, "weight"));
+                    model.mm_fc_b = get_tensor(string_format(TN_MM_FC, "bias"));
+                } break;
+            case PROJECTOR_TYPE_HCX_QWEN2A:
+                {
+                    model.conv1d_1_w = get_tensor(string_format(TN_CONV1D, 1, "weight"));
+                    model.conv1d_1_b = get_tensor(string_format(TN_CONV1D, 1, "bias"));
+                    model.conv1d_2_w = get_tensor(string_format(TN_CONV1D, 2, "weight"));
+                    model.conv1d_2_b = get_tensor(string_format(TN_CONV1D, 2, "bias"));
+                    model.mm_1_w = get_tensor(string_format(TN_MM_AUDIO_MLP, 1, "weight"));
+                    model.mm_1_b = get_tensor(string_format(TN_MM_AUDIO_MLP, 1, "bias"));
+                    model.mm_2_w = get_tensor(string_format(TN_MM_AUDIO_MLP, 2, "weight"));
+                    model.mm_2_b = get_tensor(string_format(TN_MM_AUDIO_MLP, 2, "bias"));
                 } break;
             default:
                 GGML_ASSERT(false && "unknown projector type");
@@ -2832,6 +2866,7 @@ bool clip_image_preprocess(struct clip_ctx * ctx, const clip_image_u8 * img, str
         case PROJECTOR_TYPE_QWEN25VL:
         case PROJECTOR_TYPE_QWEN3VL:
         case PROJECTOR_TYPE_GLM4V:
+        case PROJECTOR_TYPE_HCX_QWEN25VL:
             {
                 GGML_ASSERT(params.image_min_pixels > 0 && params.image_max_pixels > 0);
                 clip_image_u8 resized;
@@ -3142,6 +3177,7 @@ int clip_n_output_tokens_x(const struct clip_ctx * ctx, struct clip_image_f32 * 
         case PROJECTOR_TYPE_QWEN3VL:
         case PROJECTOR_TYPE_GLM4V:
         case PROJECTOR_TYPE_YOUTUVL:
+        case PROJECTOR_TYPE_HCX_QWEN25VL:
             return (img->nx / params.patch_size) / 2;
         default:
             break;
@@ -3158,6 +3194,7 @@ int clip_n_output_tokens_y(const struct clip_ctx * ctx, struct clip_image_f32 * 
         case PROJECTOR_TYPE_QWEN3VL:
         case PROJECTOR_TYPE_GLM4V:
         case PROJECTOR_TYPE_YOUTUVL:
+        case PROJECTOR_TYPE_HCX_QWEN25VL:
             return (img->ny / params.patch_size) / 2;
         default:
             break;
@@ -3219,6 +3256,7 @@ int clip_n_output_tokens(const struct clip_ctx * ctx, struct clip_image_f32 * im
         case PROJECTOR_TYPE_QWEN3VL:
         case PROJECTOR_TYPE_GLM4V:
         case PROJECTOR_TYPE_YOUTUVL:
+        case PROJECTOR_TYPE_HCX_QWEN25VL:
             {
                 // dynamic size (2 conv, so double patch size)
                 int x_patch = img->nx / (params.patch_size * 2);
@@ -3266,6 +3304,7 @@ int clip_n_output_tokens(const struct clip_ctx * ctx, struct clip_image_f32 * im
         case PROJECTOR_TYPE_ULTRAVOX:
         case PROJECTOR_TYPE_QWEN2A:
         case PROJECTOR_TYPE_MUSIC_FLAMINGO:
+        case PROJECTOR_TYPE_HCX_QWEN2A:
             {
                 n_patches = img->nx;
 
@@ -3500,10 +3539,11 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
             } break;
         case PROJECTOR_TYPE_QWEN25VL:
         case PROJECTOR_TYPE_YOUTUVL:
+        case PROJECTOR_TYPE_HCX_QWEN25VL:
             {
                 // pw * ph = number of tokens output by ViT after apply patch merger
                 // ipw * ipw = number of vision token been processed inside ViT
-                const bool use_window_attn = ctx->model.proj_type == PROJECTOR_TYPE_QWEN25VL ? hparams.n_wa_pattern > 0 : !hparams.wa_layer_indexes.empty();
+                const bool use_window_attn = ctx->model.proj_type == PROJECTOR_TYPE_QWEN25VL || ctx->model.proj_type == PROJECTOR_TYPE_HCX_QWEN25VL ? hparams.n_wa_pattern > 0 : !hparams.wa_layer_indexes.empty();
                 const int merge_ratio = 2;
                 const int pw  = image_size_width  / patch_size / merge_ratio;
                 const int ph  = image_size_height / patch_size / merge_ratio;
@@ -3642,6 +3682,7 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
         case PROJECTOR_TYPE_MUSIC_FLAMINGO:
         case PROJECTOR_TYPE_JANUS_PRO:
         case PROJECTOR_TYPE_COGVLM:
+        case PROJECTOR_TYPE_HCX_QWEN2A:
             {
                 // do nothing
             } break;
@@ -3772,6 +3813,10 @@ int clip_n_mmproj_embd(const struct clip_ctx * ctx) {
             return ctx->model.position_embeddings->ne[0];
         case PROJECTOR_TYPE_GLM4V:
             return ctx->model.mm_ffn_down_w->ne[1];
+        case PROJECTOR_TYPE_HCX_QWEN25VL:
+            return ctx->model.mm_fc_b->ne[0];
+        case PROJECTOR_TYPE_HCX_QWEN2A:
+            return ctx->model.mm_2_w->ne[1];
         default:
             GGML_ABORT("Unknown projector type");
     }
@@ -3809,6 +3854,7 @@ bool clip_has_whisper_encoder(const struct clip_ctx * ctx) {
         case PROJECTOR_TYPE_GLMA:
         case PROJECTOR_TYPE_VOXTRAL:
         case PROJECTOR_TYPE_MUSIC_FLAMINGO:
+        case PROJECTOR_TYPE_HCX_QWEN2A:
             return true;
         default:
             return false;

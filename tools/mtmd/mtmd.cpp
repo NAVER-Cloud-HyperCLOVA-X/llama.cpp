@@ -314,6 +314,13 @@ struct mtmd_context {
             img_beg = "<|begin_of_image|>";
             img_end = "<|end_of_image|>";
 
+        } else if (proj == PROJECTOR_TYPE_HCX_QWEN25VL) {
+            // <|mime_start|>{"id": "' + image_id + '", "type": "image/jpeg", "filename": "image.jpg"}<|mime_end|>\n
+            // <|discrete_image_start|><|DISCRETE_IMAGE_PAD|><|discrete_image_end|>\n
+            // <|image_start|><|IMAGE_PAD|><|image_end|>
+            img_beg = "<|im_start|>";
+            img_end = "<|im_end|>";
+
         }
     }
 
@@ -332,6 +339,7 @@ struct mtmd_context {
             case PROJECTOR_TYPE_VOXTRAL:
             case PROJECTOR_TYPE_GLMA:
             case PROJECTOR_TYPE_MUSIC_FLAMINGO:
+            case PROJECTOR_TYPE_HCX_QWEN2A:
                 audio_preproc = std::make_unique<mtmd_audio_preprocessor_whisper>(ctx_a);
                 break;
             case PROJECTOR_TYPE_LFM2A:
@@ -357,6 +365,14 @@ struct mtmd_context {
         } else if (proj == PROJECTOR_TYPE_MUSIC_FLAMINGO) {
             // <sound> ... (embeddings) ...
             aud_beg = "<sound>";
+        } else if (proj == PROJECTOR_TYPE_HCX_QWEN2A) {
+            // <|mime_start|>{"id": "' + audio_id + '", "type": "audio/mpeg", "filename":"user_query.wav"}<|mime_end|>\n
+            // <|audio_aux_start|>다음 중 audio_duration은 오디오 길이 정보입니다. 참고하여 답변하세요. {"audio_duration": "<|audio_meta_duration|>"}<|audio_aux_end|>\n
+            // <|discrete_audio_start|><|DISCRETE_AUDIO_PAD|><|discrete_audio_end|>\n
+            // <|audio_start|><|AUDIO_PAD|><|audio_end|>
+            aud_beg = "<|audio_start|>";
+            aud_end = "<|audio_end|>";
+
         }
     }
 
@@ -877,6 +893,8 @@ bool mtmd_decode_use_mrope(mtmd_context * ctx) {
         case PROJECTOR_TYPE_QWEN25VL:
         case PROJECTOR_TYPE_QWEN3VL:
         case PROJECTOR_TYPE_GLM4V:
+        // Note: HyperCLOVAX-SEED-Omni-8B does not use mrope.
+        // case PROJECTOR_TYPE_HCX_QWEN25VL:
             return true;
         default:
             return false;

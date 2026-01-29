@@ -103,6 +103,14 @@ ggml_cgraph * clip_graph_whisper_enc::build() {
             cur = build_ffn(cur, model.mm_1_w, model.mm_1_b, nullptr, nullptr, model.mm_2_w, model.mm_2_b, hparams.ffn_op, 0);
             cur = ggml_concat(ctx0, model.mm_boi, cur, 1);
             cur = ggml_concat(ctx0, cur, model.mm_eoi, 1);
+    } else if (proj_type == PROJECTOR_TYPE_HCX_QWEN2A) {
+        // projector
+        cur = ggml_mul_mat(ctx0, model.mm_1_w, cur);
+        cur = ggml_add(ctx0, cur, model.mm_1_b);
+        cur = ggml_gelu_erf(ctx0, cur);
+        cur = ggml_mul_mat(ctx0, model.mm_2_w, cur);
+        cur = ggml_add(ctx0, cur, model.mm_2_b);
+
     } else {
         GGML_ABORT("%s: unknown projector type", __func__);
     }

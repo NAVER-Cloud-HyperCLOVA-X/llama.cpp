@@ -377,7 +377,8 @@ struct clip_model {
     bool audio_has_avgpool() const {
         return proj_type == PROJECTOR_TYPE_QWEN2A
             || proj_type == PROJECTOR_TYPE_VOXTRAL
-            || proj_type == PROJECTOR_TYPE_MUSIC_FLAMINGO;
+            || proj_type == PROJECTOR_TYPE_MUSIC_FLAMINGO
+            || proj_type == PROJECTOR_TYPE_HCX_QWEN2A;
     }
 
     bool audio_has_stack_frames() const {

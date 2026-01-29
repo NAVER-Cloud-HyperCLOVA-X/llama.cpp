@@ -102,6 +102,7 @@
 #define TN_MM_SOFT_EMB_N   "mm.soft_emb_norm.weight"    // gemma3
 #define TN_MM_PROJECTOR    "mm.model.fc.weight"         // idefics3
 #define TN_MM_PATCH_MERGER "mm.patch_merger.%s"         // mistral small 3.1, glm4v
+#define TN_MM_FC           "mm.model.fc.%s"             // HyperCLOVAX-SEED-Omni-8B
 #define TN_TOK_IMG_BREAK   "v.token_embd.img_break"     // pixtral
 #define TN_TOK_GLM_BOI     "adapter.boi"                // glm-edge (these embeddings are not in text model)
 #define TN_TOK_GLM_EOI     "adapter.eoi"                // glm-edge (these embeddings are not in text model)
@@ -194,7 +195,6 @@
 #define TN_MNV5_MSFA_FFN_PROJ_BN "v.msfa.ffn.pw_proj.bn.weight"
 #define TN_MNV5_MSFA_NORM        "v.msfa.norm.weight"
 
-
 // align x to upper multiple of n
 #define CLIP_ALIGN(x, n) ((((x) + (n) - 1) / (n)) * (n))
 
@@ -233,6 +233,9 @@ enum projector_type {
     PROJECTOR_TYPE_LFM2A,
     PROJECTOR_TYPE_GLM4V,
     PROJECTOR_TYPE_YOUTUVL,
+    PROJECTOR_TYPE_HCX_OMNI,  // will be replaced by HCXOMNI_QWEN2A or HCXOMNI_QWEN25VL depending on clip_ctx
+    PROJECTOR_TYPE_HCX_QWEN25VL,
+    PROJECTOR_TYPE_HCX_QWEN2A,
     PROJECTOR_TYPE_UNKNOWN,
 };
 
@@ -266,6 +269,9 @@ static std::map<projector_type, std::string> PROJECTOR_TYPE_NAMES = {
     { PROJECTOR_TYPE_LFM2A,     "lfm2a"},
     { PROJECTOR_TYPE_GLM4V,     "glm4v"},
     { PROJECTOR_TYPE_YOUTUVL,   "youtuvl"},
+    { PROJECTOR_TYPE_HCX_OMNI,     "hcxomni"},
+    { PROJECTOR_TYPE_HCX_QWEN25VL, "hcx_qwen2.5vl"},
+    { PROJECTOR_TYPE_HCX_QWEN2A,   "hcx_qwen2a"},
 };
 
 static projector_type clip_projector_type_from_string(const std::string & str) {
