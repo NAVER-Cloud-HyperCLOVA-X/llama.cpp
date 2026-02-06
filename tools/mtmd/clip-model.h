@@ -63,6 +63,9 @@ struct clip_hparams {
     int32_t n_wa_pattern = 0;
     std::unordered_set<int32_t> wa_layer_indexes; // explicit layer indexes that use full attention (for irregular patterns like YoutuVL)
 
+    // HyperCLOVAX-SEED-Vision-Instruct-3B
+    int32_t num_queries = 0;
+
     // audio
     int32_t n_mel_bins = 0; // whisper preprocessor
     int32_t proj_stack_factor = 0; // ultravox
@@ -373,6 +376,92 @@ struct clip_model {
     std::array<ggml_tensor *, 7> pre_encode_conv_X_b = {nullptr};
     ggml_tensor * pre_encode_out_w = nullptr;
     ggml_tensor * pre_encode_out_b = nullptr;
+
+    // HyperCLOVAX-SEED-Vision-Instruct-3B
+    ggml_tensor * mm_model_0_block_1_conv_1_bn_w = nullptr;
+    ggml_tensor * mm_model_0_block_1_conv_1_bn_b = nullptr;
+    ggml_tensor * mm_model_0_block_1_conv_1_conv_w = nullptr;
+    ggml_tensor * mm_model_0_block_1_conv_2_bn_w = nullptr;
+    ggml_tensor * mm_model_0_block_1_conv_2_bn_b = nullptr;
+    ggml_tensor * mm_model_0_block_1_conv_2_conv_w = nullptr;
+    ggml_tensor * mm_model_0_block_1_conv_3_bn_w = nullptr;
+    ggml_tensor * mm_model_0_block_1_conv_3_bn_b = nullptr;
+    ggml_tensor * mm_model_0_block_1_conv_3_conv_w = nullptr;
+    ggml_tensor * mm_model_0_block_1_se_fc1_w = nullptr;
+    ggml_tensor * mm_model_0_block_1_se_fc1_b = nullptr;
+    ggml_tensor * mm_model_0_block_1_se_fc2_w = nullptr;
+    ggml_tensor * mm_model_0_block_1_se_fc2_b = nullptr;
+    ggml_tensor * mm_model_0_block_2_conv_1_bn_w = nullptr;
+    ggml_tensor * mm_model_0_block_2_conv_1_bn_b = nullptr;
+    ggml_tensor * mm_model_0_block_2_conv_1_conv_w = nullptr;
+    ggml_tensor * mm_model_0_block_2_conv_2_bn_w = nullptr;
+    ggml_tensor * mm_model_0_block_2_conv_2_bn_b = nullptr;
+    ggml_tensor * mm_model_0_block_2_conv_2_conv_w = nullptr;
+    ggml_tensor * mm_model_0_block_2_conv_3_bn_w = nullptr;
+    ggml_tensor * mm_model_0_block_2_conv_3_bn_b = nullptr;
+    ggml_tensor * mm_model_0_block_2_conv_3_conv_w = nullptr;
+    ggml_tensor * mm_model_0_block_2_se_fc1_w = nullptr;
+    ggml_tensor * mm_model_0_block_2_se_fc1_b = nullptr;
+    ggml_tensor * mm_model_0_block_2_se_fc2_w = nullptr;
+    ggml_tensor * mm_model_0_block_2_se_fc2_b = nullptr;
+    ggml_tensor * mm_model_0_block_3_conv_1_bn_w = nullptr;
+    ggml_tensor * mm_model_0_block_3_conv_1_bn_b = nullptr;
+    ggml_tensor * mm_model_0_block_3_conv_1_conv_w = nullptr;
+    ggml_tensor * mm_model_0_block_3_conv_2_bn_w = nullptr;
+    ggml_tensor * mm_model_0_block_3_conv_2_bn_b = nullptr;
+    ggml_tensor * mm_model_0_block_3_conv_2_conv_w = nullptr;
+    ggml_tensor * mm_model_0_block_3_conv_3_bn_w = nullptr;
+    ggml_tensor * mm_model_0_block_3_conv_3_bn_b = nullptr;
+    ggml_tensor * mm_model_0_block_3_conv_3_conv_w = nullptr;
+    ggml_tensor * mm_model_0_block_3_se_fc1_w = nullptr;
+    ggml_tensor * mm_model_0_block_3_se_fc1_b = nullptr;
+    ggml_tensor * mm_model_0_block_3_se_fc2_w = nullptr;
+    ggml_tensor * mm_model_0_block_3_se_fc2_b = nullptr;
+    ggml_tensor * mm_model_2_block_1_conv_1_bn_w = nullptr;
+    ggml_tensor * mm_model_2_block_1_conv_1_bn_b = nullptr;
+    ggml_tensor * mm_model_2_block_1_conv_1_conv_w = nullptr;
+    ggml_tensor * mm_model_2_block_1_conv_2_bn_w = nullptr;
+    ggml_tensor * mm_model_2_block_1_conv_2_bn_b = nullptr;
+    ggml_tensor * mm_model_2_block_1_conv_2_conv_w = nullptr;
+    ggml_tensor * mm_model_2_block_1_conv_3_bn_w = nullptr;
+    ggml_tensor * mm_model_2_block_1_conv_3_bn_b = nullptr;
+    ggml_tensor * mm_model_2_block_1_conv_3_conv_w = nullptr;
+    ggml_tensor * mm_model_2_block_1_se_fc1_w = nullptr;
+    ggml_tensor * mm_model_2_block_1_se_fc1_b = nullptr;
+    ggml_tensor * mm_model_2_block_1_se_fc2_w = nullptr;
+    ggml_tensor * mm_model_2_block_1_se_fc2_b = nullptr;
+    ggml_tensor * mm_model_2_block_2_conv_1_bn_w = nullptr;
+    ggml_tensor * mm_model_2_block_2_conv_1_bn_b = nullptr;
+    ggml_tensor * mm_model_2_block_2_conv_1_conv_w = nullptr;
+    ggml_tensor * mm_model_2_block_2_conv_2_bn_w = nullptr;
+    ggml_tensor * mm_model_2_block_2_conv_2_bn_b = nullptr;
+    ggml_tensor * mm_model_2_block_2_conv_2_conv_w = nullptr;
+    ggml_tensor * mm_model_2_block_2_conv_3_bn_w = nullptr;
+    ggml_tensor * mm_model_2_block_2_conv_3_bn_b = nullptr;
+    ggml_tensor * mm_model_2_block_2_conv_3_conv_w = nullptr;
+    ggml_tensor * mm_model_2_block_2_se_fc1_w = nullptr;
+    ggml_tensor * mm_model_2_block_2_se_fc1_b = nullptr;
+    ggml_tensor * mm_model_2_block_2_se_fc2_w = nullptr;
+    ggml_tensor * mm_model_2_block_2_se_fc2_b = nullptr;
+    ggml_tensor * mm_model_2_block_3_conv_1_bn_w = nullptr;
+    ggml_tensor * mm_model_2_block_3_conv_1_bn_b = nullptr;
+    ggml_tensor * mm_model_2_block_3_conv_1_conv_w = nullptr;
+    ggml_tensor * mm_model_2_block_3_conv_2_bn_w = nullptr;
+    ggml_tensor * mm_model_2_block_3_conv_2_bn_b = nullptr;
+    ggml_tensor * mm_model_2_block_3_conv_2_conv_w = nullptr;
+    ggml_tensor * mm_model_2_block_3_conv_3_bn_w = nullptr;
+    ggml_tensor * mm_model_2_block_3_conv_3_bn_b = nullptr;
+    ggml_tensor * mm_model_2_block_3_conv_3_conv_w = nullptr;
+    ggml_tensor * mm_model_2_block_3_se_fc1_w = nullptr;
+    ggml_tensor * mm_model_2_block_3_se_fc1_b = nullptr;
+    ggml_tensor * mm_model_2_block_3_se_fc2_w = nullptr;
+    ggml_tensor * mm_model_2_block_3_se_fc2_b = nullptr;
+
+    ggml_tensor * mm_model_readout_0_w = nullptr;
+    ggml_tensor * mm_model_readout_0_b = nullptr;
+    ggml_tensor * mm_model_readout_2_w = nullptr;
+    ggml_tensor * mm_model_readout_2_b = nullptr;
+    ggml_tensor * mm_model_pos_embd = nullptr;
 
     bool audio_has_avgpool() const {
         return proj_type == PROJECTOR_TYPE_QWEN2A

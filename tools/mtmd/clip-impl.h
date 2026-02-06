@@ -59,6 +59,8 @@
 #define KEY_A_NUM_MEL_BINS      "clip.audio.num_mel_bins"
 #define KEY_A_PROJ_STACK_FACTOR "clip.audio.projector.stack_factor"
 
+// HyperCLOVAX-SEED-Vision-Instruct-3B
+#define KEY_MM_NUM_QUERIES         "clip.vision.mm.num_queries"
 
 //
 // tensor name constants
@@ -195,6 +197,12 @@
 #define TN_MNV5_MSFA_FFN_PROJ_BN "v.msfa.ffn.pw_proj.bn.weight"
 #define TN_MNV5_MSFA_NORM        "v.msfa.norm.weight"
 
+// HyperCLOVAX-SEED-Vision-Instruct-3B
+#define TN_HCXVLM_PROJ_MLP       "mm.readout.%d.%s"
+#define TN_HCXVLM_PROJ_CONV      "mm.net.%d.b%d.conv%d.%s.%s"
+#define TN_HCXVLM_PROJ_SE        "mm.net.%d.b%d.se.fc%d.%s"
+#define TN_HCXVLM_PROJ_EMBD      "mm.pos_emb"
+
 // align x to upper multiple of n
 #define CLIP_ALIGN(x, n) ((((x) + (n) - 1) / (n)) * (n))
 
@@ -233,6 +241,7 @@ enum projector_type {
     PROJECTOR_TYPE_LFM2A,
     PROJECTOR_TYPE_GLM4V,
     PROJECTOR_TYPE_YOUTUVL,
+    PROJECTOR_TYPE_CABSTRACTOR,
     PROJECTOR_TYPE_HCX_OMNI,  // will be replaced by HCXOMNI_QWEN2A or HCXOMNI_QWEN25VL depending on clip_ctx
     PROJECTOR_TYPE_HCX_QWEN25VL,
     PROJECTOR_TYPE_HCX_QWEN2A,
@@ -269,6 +278,7 @@ static std::map<projector_type, std::string> PROJECTOR_TYPE_NAMES = {
     { PROJECTOR_TYPE_LFM2A,     "lfm2a"},
     { PROJECTOR_TYPE_GLM4V,     "glm4v"},
     { PROJECTOR_TYPE_YOUTUVL,   "youtuvl"},
+    { PROJECTOR_TYPE_CABSTRACTOR,  "cabstractor"},
     { PROJECTOR_TYPE_HCX_OMNI,     "hcxomni"},
     { PROJECTOR_TYPE_HCX_QWEN25VL, "hcx_qwen2.5vl"},
     { PROJECTOR_TYPE_HCX_QWEN2A,   "hcx_qwen2a"},

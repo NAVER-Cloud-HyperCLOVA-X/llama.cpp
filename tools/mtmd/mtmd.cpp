@@ -314,7 +314,17 @@ struct mtmd_context {
             img_beg = "<|begin_of_image|>";
             img_end = "<|end_of_image|>";
 
-        } else if (proj == PROJECTOR_TYPE_HCX_QWEN25VL) {
+        } else if (proj == PROJECTOR_TYPE_CABSTRACTOR) {
+            // <|im_start|>user (mime)
+            // {"type": "image/jpeg", "filename": "image_01.png"}<|im_end|>
+            // <|im_start|>user (vector)
+            // <|dummy3|><|im_end|>
+            // <|im_start|>image/aux
+            // 다음 중 ocr은 사진에서 검출된 글자이고, lens_keyword는 사진에서 추출된 keyword와 bbox 위치입니다. bbox는 0~1 사이로 정규화된 [x1, y1, x2, y2]의 형태입니다. 참고하여 답변하세요. {"ocr": "", "lens_keywords": "", "lens_local_keywords": ""}<|im_end|>
+            img_beg = "<|im_start|> (vector)\n";
+            img_end = "<|im_end|>";
+
+        }  else if (proj == PROJECTOR_TYPE_HCX_QWEN25VL) {
             // <|mime_start|>{"id": "' + image_id + '", "type": "image/jpeg", "filename": "image.jpg"}<|mime_end|>\n
             // <|discrete_image_start|><|DISCRETE_IMAGE_PAD|><|discrete_image_end|>\n
             // <|image_start|><|IMAGE_PAD|><|image_end|>

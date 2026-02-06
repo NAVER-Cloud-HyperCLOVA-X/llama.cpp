@@ -780,6 +780,7 @@ static ggml_cgraph * clip_image_build_graph(clip_ctx * ctx, const clip_image_f32
         case PROJECTOR_TYPE_IDEFICS3:
         case PROJECTOR_TYPE_LFM2:
         case PROJECTOR_TYPE_JANUS_PRO:
+        case PROJECTOR_TYPE_CABSTRACTOR:
             {
                 builder = std::make_unique<clip_graph_siglip>(ctx, img);
             } break;
@@ -1240,6 +1241,11 @@ struct clip_model_loader {
                         hparams.audio_window_len       = 400;
                         hparams.audio_hop_len          = 160;
                     } break;
+                case PROJECTOR_TYPE_CABSTRACTOR:
+                    {
+                        // num_queries_vis_abstractor in config.json
+                        get_u32(KEY_MM_NUM_QUERIES, hparams.num_queries);
+                    } break;
                 default:
                     break;
             }
@@ -1266,6 +1272,7 @@ struct clip_model_loader {
                 LOG_INF("%s: minicpmv_version:   %d\n", __func__, hparams.minicpmv_version);
                 LOG_INF("%s: n_merge:            %d\n", __func__, hparams.n_merge);
                 LOG_INF("%s: n_wa_pattern: %d\n", __func__, hparams.n_wa_pattern);
+                LOG_INF("%s: num_queries:        %d\n", __func__, hparams.num_queries);
                 if (!hparams.wa_layer_indexes.empty()) {
                     LOG_INF("%s: wa_layer_indexes:  ", __func__);
                     for (auto & layer : hparams.wa_layer_indexes) {
@@ -1842,6 +1849,97 @@ struct clip_model_loader {
                         layer.conv_pw2_w   = get_tensor(string_format(TN_CONV_PW2,  prefix, il, "weight"));
                         layer.conv_pw2_b   = get_tensor(string_format(TN_CONV_PW2,  prefix, il, "bias"));
                     }
+                } break;
+            case PROJECTOR_TYPE_CABSTRACTOR:
+                {
+                    model.image_newline = get_tensor(TN_IMAGE_NEWLINE);
+
+                    // HCXVLM projection
+                    model.mm_model_0_block_1_conv_1_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 1, 1, "bn", "weight"));
+                    model.mm_model_0_block_1_conv_1_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 1, 1, "bn", "bias"));
+                    model.mm_model_0_block_1_conv_1_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 1, 1, "conv", "weight"));
+                    model.mm_model_0_block_1_conv_2_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 1, 2, "bn", "weight"));
+                    model.mm_model_0_block_1_conv_2_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 1, 2, "bn", "bias"));
+                    model.mm_model_0_block_1_conv_2_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 1, 2, "conv", "weight"));
+                    model.mm_model_0_block_1_conv_3_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 1, 3, "bn", "weight"));
+                    model.mm_model_0_block_1_conv_3_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 1, 3, "bn", "bias"));
+                    model.mm_model_0_block_1_conv_3_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 1, 3, "conv", "weight"));
+                    model.mm_model_0_block_1_se_fc1_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 1, 1, "weight"));
+                    model.mm_model_0_block_1_se_fc1_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 1, 1, "bias"));
+                    model.mm_model_0_block_1_se_fc2_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 1, 2, "weight"));
+                    model.mm_model_0_block_1_se_fc2_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 1, 2, "bias"));
+                    model.mm_model_0_block_2_conv_1_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 2, 1, "bn", "weight"));
+                    model.mm_model_0_block_2_conv_1_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 2, 1, "bn", "bias"));
+                    model.mm_model_0_block_2_conv_1_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 2, 1, "conv", "weight"));
+                    model.mm_model_0_block_2_conv_2_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 2, 2, "bn", "weight"));
+                    model.mm_model_0_block_2_conv_2_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 2, 2, "bn", "bias"));
+                    model.mm_model_0_block_2_conv_2_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 2, 2, "conv", "weight"));
+                    model.mm_model_0_block_2_conv_3_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 2, 3, "bn", "weight"));
+                    model.mm_model_0_block_2_conv_3_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 2, 3, "bn", "bias"));
+                    model.mm_model_0_block_2_conv_3_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 2, 3, "conv", "weight"));
+                    model.mm_model_0_block_2_se_fc1_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 2, 1, "weight"));
+                    model.mm_model_0_block_2_se_fc1_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 2, 1, "bias"));
+                    model.mm_model_0_block_2_se_fc2_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 2, 2, "weight"));
+                    model.mm_model_0_block_2_se_fc2_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 2, 2, "bias"));
+                    model.mm_model_0_block_3_conv_1_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 3, 1, "bn", "weight"));
+                    model.mm_model_0_block_3_conv_1_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 3, 1, "bn", "bias"));
+                    model.mm_model_0_block_3_conv_1_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 3, 1, "conv", "weight"));
+                    model.mm_model_0_block_3_conv_2_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 3, 2, "bn", "weight"));
+                    model.mm_model_0_block_3_conv_2_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 3, 2, "bn", "bias"));
+                    model.mm_model_0_block_3_conv_2_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 3, 2, "conv", "weight"));
+                    model.mm_model_0_block_3_conv_3_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 3, 3, "bn", "weight"));
+                    model.mm_model_0_block_3_conv_3_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 3, 3, "bn", "bias"));
+                    model.mm_model_0_block_3_conv_3_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 0, 3, 3, "conv", "weight"));
+                    model.mm_model_0_block_3_se_fc1_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 3, 1, "weight"));
+                    model.mm_model_0_block_3_se_fc1_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 3, 1, "bias"));
+                    model.mm_model_0_block_3_se_fc2_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 3, 2, "weight"));
+                    model.mm_model_0_block_3_se_fc2_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 0, 3, 2, "bias"));
+
+                    model.mm_model_2_block_1_conv_1_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 1, 1, "bn", "weight"));
+                    model.mm_model_2_block_1_conv_1_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 1, 1, "bn", "bias"));
+                    model.mm_model_2_block_1_conv_1_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 1, 1, "conv", "weight"));
+                    model.mm_model_2_block_1_conv_2_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 1, 2, "bn", "weight"));
+                    model.mm_model_2_block_1_conv_2_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 1, 2, "bn", "bias"));
+                    model.mm_model_2_block_1_conv_2_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 1, 2, "conv", "weight"));
+                    model.mm_model_2_block_1_conv_3_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 1, 3, "bn", "weight"));
+                    model.mm_model_2_block_1_conv_3_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 1, 3, "bn", "bias"));
+                    model.mm_model_2_block_1_conv_3_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 1, 3, "conv", "weight"));
+                    model.mm_model_2_block_1_se_fc1_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 1, 1, "weight"));
+                    model.mm_model_2_block_1_se_fc1_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 1, 1, "bias"));
+                    model.mm_model_2_block_1_se_fc2_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 1, 2, "weight"));
+                    model.mm_model_2_block_1_se_fc2_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 1, 2, "bias"));
+                    model.mm_model_2_block_2_conv_1_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 2, 1, "bn", "weight"));
+                    model.mm_model_2_block_2_conv_1_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 2, 1, "bn", "bias"));
+                    model.mm_model_2_block_2_conv_1_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 2, 1, "conv", "weight"));
+                    model.mm_model_2_block_2_conv_2_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 2, 2, "bn", "weight"));
+                    model.mm_model_2_block_2_conv_2_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 2, 2, "bn", "bias"));
+                    model.mm_model_2_block_2_conv_2_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 2, 2, "conv", "weight"));
+                    model.mm_model_2_block_2_conv_3_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 2, 3, "bn", "weight"));
+                    model.mm_model_2_block_2_conv_3_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 2, 3, "bn", "bias"));
+                    model.mm_model_2_block_2_conv_3_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 2, 3, "conv", "weight"));
+                    model.mm_model_2_block_2_se_fc1_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 2, 1, "weight"));
+                    model.mm_model_2_block_2_se_fc1_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 2, 1, "bias"));
+                    model.mm_model_2_block_2_se_fc2_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 2, 2, "weight"));
+                    model.mm_model_2_block_2_se_fc2_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 2, 2, "bias"));
+                    model.mm_model_2_block_3_conv_1_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 3, 1, "bn", "weight"));
+                    model.mm_model_2_block_3_conv_1_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 3, 1, "bn", "bias"));
+                    model.mm_model_2_block_3_conv_1_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 3, 1, "conv", "weight"));
+                    model.mm_model_2_block_3_conv_2_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 3, 2, "bn", "weight"));
+                    model.mm_model_2_block_3_conv_2_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 3, 2, "bn", "bias"));
+                    model.mm_model_2_block_3_conv_2_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 3, 2, "conv", "weight"));
+                    model.mm_model_2_block_3_conv_3_bn_w   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 3, 3, "bn", "weight"));
+                    model.mm_model_2_block_3_conv_3_bn_b   = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 3, 3, "bn", "bias"));
+                    model.mm_model_2_block_3_conv_3_conv_w = get_tensor(string_format(TN_HCXVLM_PROJ_CONV, 2, 3, 3, "conv", "weight"));
+                    model.mm_model_2_block_3_se_fc1_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 3, 1, "weight"));
+                    model.mm_model_2_block_3_se_fc1_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 3, 1, "bias"));
+                    model.mm_model_2_block_3_se_fc2_w      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 3, 2, "weight"));
+                    model.mm_model_2_block_3_se_fc2_b      = get_tensor(string_format(TN_HCXVLM_PROJ_SE, 2, 3, 2, "bias"));
+
+                    model.mm_model_pos_embd                = get_tensor(string_format(TN_HCXVLM_PROJ_EMBD));
+                    model.mm_model_readout_0_w             = get_tensor(string_format(TN_HCXVLM_PROJ_MLP, 0, "weight"));
+                    model.mm_model_readout_0_b             = get_tensor(string_format(TN_HCXVLM_PROJ_MLP, 0, "bias"));
+                    model.mm_model_readout_2_w             = get_tensor(string_format(TN_HCXVLM_PROJ_MLP, 2, "weight"));
+                    model.mm_model_readout_2_b             = get_tensor(string_format(TN_HCXVLM_PROJ_MLP, 2, "bias"));
                 } break;
             case PROJECTOR_TYPE_HCX_QWEN25VL:
                 {
@@ -2987,6 +3085,7 @@ bool clip_image_preprocess(struct clip_ctx * ctx, const clip_image_u8 * img, str
         case PROJECTOR_TYPE_GLM_EDGE:
         case PROJECTOR_TYPE_GEMMA3:
         case PROJECTOR_TYPE_INTERNVL: // TODO @ngxson : support dynamic resolution
+        case PROJECTOR_TYPE_CABSTRACTOR:
             {
                 clip_image_u8 resized_image;
                 int sz = params.image_size;
@@ -3341,6 +3440,10 @@ int clip_n_output_tokens(const struct clip_ctx * ctx, struct clip_image_f32 * im
             {
                 n_patches = ((((img->nx + 1) / 2) + 1) / 2 + 1) / 2;
             } break;
+        case PROJECTOR_TYPE_CABSTRACTOR:
+            {
+                n_patches = ctx->model.hparams.num_queries;
+            } break;
         default:
             GGML_ABORT("unsupported projector type");
     }
@@ -3682,6 +3785,7 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
         case PROJECTOR_TYPE_MUSIC_FLAMINGO:
         case PROJECTOR_TYPE_JANUS_PRO:
         case PROJECTOR_TYPE_COGVLM:
+        case PROJECTOR_TYPE_CABSTRACTOR:
         case PROJECTOR_TYPE_HCX_QWEN2A:
             {
                 // do nothing
@@ -3813,6 +3917,8 @@ int clip_n_mmproj_embd(const struct clip_ctx * ctx) {
             return ctx->model.position_embeddings->ne[0];
         case PROJECTOR_TYPE_GLM4V:
             return ctx->model.mm_ffn_down_w->ne[1];
+        case PROJECTOR_TYPE_CABSTRACTOR:
+            return ctx->model.hparams.projection_dim;
         case PROJECTOR_TYPE_HCX_QWEN25VL:
             return ctx->model.mm_fc_b->ne[0];
         case PROJECTOR_TYPE_HCX_QWEN2A:
