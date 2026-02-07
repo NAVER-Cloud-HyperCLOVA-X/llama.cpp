@@ -6,6 +6,12 @@
 [![Release](https://img.shields.io/github/v/release/ggml-org/llama.cpp)](https://github.com/ggml-org/llama.cpp/releases)
 [![Server](https://github.com/ggml-org/llama.cpp/actions/workflows/server.yml/badge.svg)](https://github.com/ggml-org/llama.cpp/actions/workflows/server.yml)
 
+**llama.cpp fork with support for HyperCLOVA X models**
+
+This repository is a fork of **ggml-org/llama.cpp**, adding compatibility for HyperCLOVA X models.
+
+- Hugging Face (GGUF models): https://huggingface.co/naver-ellm
+
 [Manifesto](https://github.com/ggml-org/llama.cpp/discussions/205) / [ggml](https://github.com/ggml-org/ggml) / [ops](https://github.com/ggml-org/llama.cpp/blob/master/docs/ops.md)
 
 LLM inference in C/C++
